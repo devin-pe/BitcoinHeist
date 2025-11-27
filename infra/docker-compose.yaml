@@ -1,0 +1,24 @@
+services:
+  app:
+    build:
+        context: ..
+        dockerfile: infra/build/Dockerfile
+    image: project:v0
+    command: python src/main.py
+    volumes:
+      - ../data:/app/data
+    depends_on:
+      mlflow:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.3.0rc0
+    command: mlflow server --host 0.0.0.0 --port 8080
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: apt-get update -y && apt-get install -y curl && curl --fail http://localhost:8080 || exit 1
+      retries: 3
+      interval: 5s

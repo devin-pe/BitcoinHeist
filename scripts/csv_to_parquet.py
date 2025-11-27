@@ -27,6 +27,7 @@ def get_partition_map(group_counts: dict, chunk_size: int):
     sorted_keys.sort(key=lambda x: (x[0], x[1]))
     partition_map = {}
     current_batch_n_rows = 0
+    parquet_file_name = None
 
     for year, day, count, year_day_key in sorted_keys:
         if (current_batch_n_rows + count > chunk_size):
@@ -63,6 +64,7 @@ def convert_csv_to_parquet(csv_path: str, parquet_dir: str, chunk_size: int):
     group_counts = compute_year_day_counts(csv_path, chunk_size)
     partition_map = get_partition_map(group_counts, chunk_size)
     write_to_parquet(csv_path, parquet_dir, chunk_size, partition_map)
+     
      
 if __name__ == "__main__":
     csv_path = FileConfig.csv_path

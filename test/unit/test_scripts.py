@@ -20,21 +20,20 @@ def test_compute_year_day_counts():
                     ]
                 ),
             ],
-            "expected": {"2020|1": 2, "2020|2": 1, "2021|5": 3},
+            "expected": {"2020&1": 2, "2020&2": 1, "2021&5": 3},
         },
         {
           # Single chunk
             "chunks": [
                 pd.DataFrame([{"year": "2019", "day": "10"}, {"year": "2019", "day": "10"}, {"year": "2019", "day": "11"}])
             ],
-            "expected": {"2019|10": 2, "2019|11": 1},
+            "expected": {"2019&10": 2, "2019&11": 1},
         },
     ]
     for case in cases:
         with mock.patch("scripts.csv_to_parquet.pd.read_csv", return_value=case["chunks"]):
             out = compute_year_day_counts("test.csv", chunk_size=2)
         assert out == case["expected"]
-
 
 
 def test_get_partition_map():
