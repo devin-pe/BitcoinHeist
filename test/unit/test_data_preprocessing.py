@@ -16,6 +16,7 @@ def test_get_data_after(spark_fixture):
             "data": spark_fixture.createDataFrame(
               pd.DataFrame([
                 {
+                  "partition_date": "2020-12-30",
                   "address": "111K8kZAEnJg245r2cM6y9zgJGHZtJPy6",
                   "year": 2020, 
                   "day": 365, 
@@ -28,6 +29,7 @@ def test_get_data_after(spark_fixture):
                   "income": 0.0
                 },
                 {
+                  "partition_date": "2021-01-01",
                   "address": "111K8kZAEnJg245r2cM6y9zgJGHZtJPy6",
                   "year": 2021, 
                   "day": 1, 
@@ -40,6 +42,7 @@ def test_get_data_after(spark_fixture):
                   "income": 0.0
                 },
                 {
+                  "partition_date": "2021-01-01",
                   "address": "111K8kZAEnJg245r2cM6y9zgJGHZtJPy6",
                   "year": 2021, 
                   "day": 2, 
@@ -55,6 +58,7 @@ def test_get_data_after(spark_fixture):
             "expected": spark_fixture.createDataFrame(
               pd.DataFrame([
                 {
+                  "partition_date": "2021-01-01",
                   "year": 2021, 
                   "day": 1, 
                   "length": 10,
@@ -66,6 +70,7 @@ def test_get_data_after(spark_fixture):
                   "income": 0.0
                 },
                 {
+                  "partition_date": "2021-01-01",
                   "year": 2021, 
                   "day": 2, 
                   "length": 10,
@@ -84,6 +89,7 @@ def test_get_data_after(spark_fixture):
             "data": spark_fixture.createDataFrame(
               pd.DataFrame([
                 {
+                  "partition_date": "2021-02-18",
                   "year": 2021, 
                   "day": 49, 
                   "length": 10,
@@ -95,6 +101,7 @@ def test_get_data_after(spark_fixture):
                   "income": 0.0
                 },
                 {
+                  "partition_date": "2021-02-19",
                   "year": 2021, 
                   "day": 50, 
                   "length": 10,
@@ -109,6 +116,7 @@ def test_get_data_after(spark_fixture):
             "expected": spark_fixture.createDataFrame(
               pd.DataFrame([
                 {
+                  "partition_date": "2021-02-19",
                   "year": 2021, 
                   "day": 50,
                   "length": 10,

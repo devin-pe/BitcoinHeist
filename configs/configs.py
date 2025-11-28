@@ -20,13 +20,17 @@ class FileConfig:
     chunk_size: int = 100_000
     
 
-@dataclass(init=False, frozen=True)    
 class PreprocessConfig:
-    load_cols = ["year", "day", "length", "weight", "count", "looped", "neighbors", "income", "label"]
-    target_col = "label"
-    benign_label = "white"
-    date_col = "transaction_date"
-    year_col = "year"
-    day_col = "day"
-    ransomware_col = "is_ransomware"
-    drop_cols = ["year", "day", "label"]
+    load_cols: list = ["partition_date", "year", "day", "length", "weight", "count", "looped", "neighbors", "income", "label"]
+    partition_date: str = "partition_date"
+    label_col: str = "label"
+    benign_label: str = "white"
+    date_col: str = "transaction_date"
+    year_col: str = "year"
+    day_col: str = "day"
+    target_col: str = "is_ransomware"
+    drop_cols: list = ["partition_date", "year", "day", "label"]
+    
+  
+class FeatureConfig:
+    numeric_cols: list = ["length", "weight", "count", "looped", "neighbors", "income"]

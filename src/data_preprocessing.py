@@ -7,13 +7,11 @@ from configs.configs import FileConfig, RunConfig, PreprocessConfig
 
 def _get_data_after(start_date: date) -> DataFrame:
   spark = SparkSession.builder.master("local[10]").getOrCreate()
-  
-  # Creates unique integer for year and day
-  start_date_int = start_date.year * 1000 + int(start_date.strftime('%j'))
   return (
-        spark.read.parquet(FileConfig.parquet_dir)
+        spark.read
+        .parquet(FileConfig.parquet_dir)
         .select(PreprocessConfig.load_cols)
-        .filter((F.col(PreprocessConfig.year_col) * 1000 + F.col(PreprocessConfig.day_col)) >= start_date_int)
+        .filter(F.col(PreprocessConfig.partition_date) >= F.lit(start_date))
     )
 
 
@@ -23,14 +21,57 @@ def preprocess(start_date: date) -> DataFrame:
   data = data.withColumn(PreprocessConfig.date_col, F.to_date(F.format_string("%d%03d", "year", "day"), "yyyyDDD"))
   
   data = data.withColumn(
-        PreprocessConfig.ransomware_col,
-        F.when(F.col(PreprocessConfig.target_col) == PreprocessConfig.benign_label, F.lit(0))
+        PreprocessConfig.target_col,
+        F.when(F.col(PreprocessConfig.label_col) == PreprocessConfig.benign_label, F.lit(0))
         .otherwise(F.lit(1))
         .cast(IntegerType())
     )
   
   data = data.drop(*PreprocessConfig.drop_cols)
+  data = data.dropna(subset=[PreprocessConfig.target_col])
   data = data.sort(F.col(PreprocessConfig.date_col))
   data = data.sample(fraction=RunConfig.sample_rate, seed=RunConfig.seed)
   
   return data
+
+
+def downsample(negative_data: DataFrame, positive_data: DataFrame, ratio: float) -> DataFrame:
+    positive_count = positive_data.count()
+    negative_count = negative_data.count()
+    
+    target_count = int(positive_count * ratio)
+    fraction = target_count / negative_count
+    
+    return negative_data.sample(withReplacement=False, fraction=fraction, seed=RunConfig.seed)
+  
+
+def split_data(data: DataFrame):
+    positive_data = data.filter(F.col(PreprocessConfig.target_col) == 1)
+    negative_data = data.filter(F.col(PreprocessConfig.target_col) == 0)
+
+    
+    negative_data = downsample(
+        negative_data, 
+        positive_data, 
+        ratio=RunConfig.negative_to_positive_ratio
+    )
+    
+    train_pos, test_pos = positive_data.randomSplit([0.8, 0.2], seed=RunConfig.seed)
+    train_neg, test_neg = negative_data.randomSplit([0.8, 0.2], seed=RunConfig.seed)
+    
+    train_data = train_pos.union(train_neg)
+    test_data = test_pos.union(test_neg)
+    
+    train_data = train_data.toPandas() # Convert early to avoid len mismatch
+    test_data = test_data.toPandas()
+    feature_cols = [c for c in train_data.columns if c != PreprocessConfig.target_col]
+    
+    train_X = train_data[feature_cols]
+    train_y = train_data[PreprocessConfig.target_col]
+    
+    test_X = test_data[feature_cols]
+    test_y = test_data[PreprocessConfig.target_col]
+
+    return train_X, train_y, test_X, test_y
+
+  
