@@ -27,10 +27,10 @@ def preprocess(start_date: date) -> DataFrame:
         .cast(IntegerType())
     )
   
-  data = data.drop(*PreprocessConfig.drop_cols)
+  cols_to_drop = PreprocessConfig.drop_cols + [PreprocessConfig.date_col]
+  data = data.drop(*cols_to_drop)
+  
   data = data.dropna(subset=[PreprocessConfig.target_col])
-  data = data.sort(F.col(PreprocessConfig.date_col))
-  data = data.sample(fraction=RunConfig.sample_rate, seed=RunConfig.seed)
   
   return data
 

@@ -4,13 +4,13 @@ services:
         context: ..
         dockerfile: infra/build/Dockerfile
     image: project:v0
-    command: python src/main.py
+    command: python src/main_training.py
     volumes:
       - ../data:/app/data
+      - ../src:/app/src
+      - ../configs:/app/configs
     depends_on:
       mlflow:
-        condition: service_healthy
-      mysql:
         condition: service_healthy
 
   mlflow:
@@ -22,3 +22,28 @@ services:
       test: apt-get update -y && apt-get install -y curl && curl --fail http://localhost:8080 || exit 1
       retries: 3
       interval: 5s
+
+  dagster:
+      build:
+        context: ..
+        dockerfile: infra/build/Dockerfile
+      image: project:v0
+      container_name: dagster_ui
+      command: sh -c "mkdir -p /app/dagster_home/logs &&
+             dagster dev -h 0.0.0.0 -p 4242 -f src/main_training.py"
+      environment:
+        - APP_ENV=DOCKER
+        - DAGSTER_HOME=/app/dagster_home
+      ports:
+        - "4242:4242"
+      volumes:
+        - ../data:/app/data
+        - ../configs:/app/configs
+        - ../src:/app/src
+        - dagster_storage:/app/dagster_home
+      depends_on:
+        mlflow:
+          condition: service_healthy
+
+volumes:
+  dagster_storage:

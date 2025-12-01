@@ -3,26 +3,27 @@ from interpret.glassbox import ExplainableBoostingClassifier
 from interpret.utils import inv_link
 from configs.configs import RunConfig
 import numpy as np
+from typing import Union
 from sklearn.metrics import (
     accuracy_score, 
     confusion_matrix, 
-    roc_auc_score,
     roc_curve
 )
 
-def train_and_explain(train_X, train_y):
+def train(train_X: pd.DataFrame, train_y: pd.Series) \
+        -> tuple[ExplainableBoostingClassifier, np.ndarray, dict, pd.DataFrame]:
+            
     model = ExplainableBoostingClassifier(
       random_state=RunConfig.seed, 
-      n_jobs=-1,
-      max_rounds=100,  
-      early_stopping_rounds=50 
+      n_jobs = RunConfig.n_jobs,
+      max_rounds= RunConfig.max_rounds,  
     )
     model.fit(train_X, train_y)
-    
-    global_explanation = model.explain_global(name='EBM')
-    global_explanation_data = global_explanation.data()
-    global_importance_dict = dict(zip(global_explanation_data['names'], 
-                                      global_explanation_data['scores']))
+    return model
+
+
+def explain(model: ExplainableBoostingClassifier, train_X: pd.DataFrame) \
+                                    -> tuple[np.ndarray, pd.DataFrame]:
     
     local_explanation_values = model.eval_terms(train_X.values)
     local_attributions = pd.DataFrame(
@@ -34,33 +35,30 @@ def train_and_explain(train_X, train_y):
     raw_preds = local_explanation_values.sum(axis=1) + model.intercept_
     probabilities = inv_link(raw_preds, model.link_)[:, 1] # only prob for ransomware
     
-    return model, probabilities, global_importance_dict, local_attributions
+    return probabilities, local_attributions
   
 
-def get_optimal_threshold(y_true, probabilities):
+def get_optimal_threshold(y_true: pd.Series, probabilities: np.ndarray) -> float:
     fpr, tpr, thresholds = roc_curve(y_true, probabilities)
     j_scores = tpr - fpr
     optimal_idx = np.argmax(j_scores)
     optimal_threshold = thresholds[optimal_idx]
-    print(f"Threshold: {optimal_threshold}")
     
     return optimal_threshold
   
   
-def evaluate(y_true, probabilities, threshold):
+def evaluate(y_true: pd.Series, probabilities: np.ndarray, threshold: float) \
+        -> dict[str, Union[float, np.ndarray]]:
+            
     y_pred = (probabilities >= threshold).astype(int)
     accuracy = accuracy_score(y_true, y_pred)
-    auc = roc_auc_score(y_true, probabilities)
-    conf_matrix = confusion_matrix(y_true, y_pred)
-    tn, fp, fn, tp = conf_matrix.ravel()
     
+    conf_matrix = confusion_matrix(y_true, y_pred)
+    _, _, fn, tp = conf_matrix.ravel()
     return {
         "accuracy": accuracy,
-        "auc": auc,
-        "probabilities": y_pred,
-        "tn": tn,
-        "fp": fp,
         "fn": fn,
         "tp": tp,
     }
+    
     

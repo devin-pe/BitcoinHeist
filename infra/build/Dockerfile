@@ -12,5 +12,7 @@ ENV PYTHONPATH=/app/
 
 COPY src/ src/
 COPY configs/ configs/
-COPY data/dataset/ data/dataset/
 COPY models/.placeholder models/.placeholder
+
+RUN mkdir -p /app/dagster_home
+ENV DAGSTER_HOME=/app/dagster_home

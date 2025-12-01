@@ -148,25 +148,29 @@ def test_preprocess(spark_fixture):
             "start_date": date(2020, 1, 1),
             "data": spark_fixture.createDataFrame(
               pd.DataFrame([
-                {"year": 2020, 
-                 "day": 1, 
-                 "length": 10,
-                 "weight": 1,
-                 "count": 246,
-                 "looped": 1,
-                 "neighbors": 2,
-                 "label": "white", 
-                 "income": 0.0
+                {
+                  "partition_date": "2020-01-01",
+                  "year": 2020, 
+                  "day": 1, 
+                  "length": 10,
+                  "weight": 1,
+                  "count": 246,
+                  "looped": 1,
+                  "neighbors": 2,
+                  "label": "white", 
+                  "income": 0.0
                  },
-                {"year": 2020, 
-                 "day": 2, 
-                 "length": 10,
-                 "weight": 1,
-                 "count": 246,
-                 "looped": 1,
-                 "neighbors": 2,
-                 "label": "wannacry",  
-                 "income": 0.0
+                {
+                  "partition_date": "2020-01-02",
+                  "year": 2020, 
+                  "day": 2, 
+                  "length": 10,
+                  "weight": 1,
+                  "count": 246,
+                  "looped": 1,
+                  "neighbors": 2,
+                  "label": "wannacry",  
+                  "income": 0.0
                  },
             ])),
             "expected": spark_fixture.createDataFrame(
@@ -178,7 +182,6 @@ def test_preprocess(spark_fixture):
                   "looped": 1,
                   "neighbors": 2,
                   "income": 0.0, 
-                  "transaction_date": date(2020, 1, 1), 
                   "is_ransomware": 0
                 },
                 {
@@ -188,7 +191,6 @@ def test_preprocess(spark_fixture):
                   "looped": 1,
                   "neighbors": 2,
                   "income": 0.0,
-                  "transaction_date": date(2020, 1, 2), 
                   "is_ransomware": 1
                 }
             ])
@@ -200,6 +202,7 @@ def test_preprocess(spark_fixture):
             "data": spark_fixture.createDataFrame(
               pd.DataFrame([
                 {
+                  "partition_date": "2020-02-01",
                   "year": 2020, 
                   "day": 32, 
                   "length": 10,
@@ -211,6 +214,7 @@ def test_preprocess(spark_fixture):
                   "income": 0.0
                 },
                 {
+                  "partition_date": "2020-12-31",
                   "year": 2020, 
                   "day": 366,  
                   "length": 10,
@@ -232,7 +236,6 @@ def test_preprocess(spark_fixture):
                   "looped": 1,
                   "neighbors": 2,
                   "income": 0.0, 
-                  "transaction_date": date(2020, 2, 1), 
                   "is_ransomware": 1
                 },
                 {
@@ -242,7 +245,6 @@ def test_preprocess(spark_fixture):
                   "looped": 1,
                   "neighbors": 2,
                   "income": 0.0,
-                  "transaction_date": date(2020, 12, 31), 
                   "is_ransomware": 0
                 }
             ])
@@ -251,9 +253,7 @@ def test_preprocess(spark_fixture):
     ]
 
     for case in cases:
-        with mock.patch("src.data_preprocessing._get_data_after") as mock_get_data, \
-        mock.patch("src.data_preprocessing.RunConfig") as MockRunConfig:
-          MockRunConfig.sample_rate = 1.0
+        with mock.patch("src.data_preprocessing._get_data_after") as mock_get_data:
           mock_get_data.return_value = case["data"]
           out = preprocess(case["start_date"])
           expected = case["expected"]
