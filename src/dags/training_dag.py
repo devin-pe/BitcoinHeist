@@ -45,25 +45,25 @@ def second_pass_feature_eng(first_pass_feature_eng: str) -> str:
     return path
 
 
-def _run_training_flow(data_path: str, context: dg.AssetExecutionContext):
+def _run_training_eval(data_path: str, context: dg.AssetExecutionContext):
     spark = get_spark_session()
     data = spark.read.parquet(data_path)
 
     train_X, train_y, test_X, test_y = split_data(data)
     model = train(train_X, train_y)
     
-    probabilities, local_attributions = explain(model, train_X)
-    threshold = get_optimal_threshold(train_y, probabilities)
+    probabilities_train, local_attributions = explain(model, train_X)
+    threshold = get_optimal_threshold(train_y, probabilities_train)
     
     feature_info = determine_important_features(
         train_y, 
-        probabilities, 
+        probabilities_train, 
         local_attributions, 
         threshold
     )
     
-    probs_test, _ = explain(model, test_X)
-    metrics = evaluate(test_y, probs_test, threshold)
+    probabilities_test, _ = explain(model, test_X)
+    metrics = evaluate(test_y, probabilities_test, threshold)
     
     context.log.info(f"Results: {metrics}")
     
@@ -86,15 +86,15 @@ def _run_training_flow(data_path: str, context: dg.AssetExecutionContext):
 
 @dg.asset(group_name="model_training")
 def results_baseline(context: dg.AssetExecutionContext, preprocessing: str):
-    return _run_training_flow(preprocessing, context)
+    return _run_training_eval(preprocessing, context)
 
 
 @dg.asset(group_name="model_training")
 def results_first_pass_feature_engineering(context: dg.AssetExecutionContext, first_pass_feature_eng: str):
-    return _run_training_flow(first_pass_feature_eng, context)
+    return _run_training_eval(first_pass_feature_eng, context)
 
 
 @dg.asset(group_name="model_training")
 def results_second_pass_feature_engineering(context: dg.AssetExecutionContext, second_pass_feature_eng: str):
-    return _run_training_flow(second_pass_feature_eng, context)
+    return _run_training_eval(second_pass_feature_eng, context)
 

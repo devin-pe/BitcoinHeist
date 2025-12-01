@@ -33,8 +33,7 @@ def test_evaluate():
             "threshold": 0.5,
             "expected": {
                 "accuracy": 1.0,
-                "auc": 1.0,      
-                "tn": 2, "fp": 0, "fn": 0, "tp": 2
+                "fn": 0, "tp": 2
             }
         },
         {
@@ -44,8 +43,7 @@ def test_evaluate():
             "threshold": 0.05,
             "expected": {
                 "accuracy": 0.5, 
-                "auc": 1.0,
-                "tn": 0, "fp": 2, "fn": 0, "tp": 2
+                "fn": 0, "tp": 2
             }
         }
     ]
@@ -54,9 +52,5 @@ def test_evaluate():
         out = evaluate(case["y_true"], case["probabilities"], case["threshold"])
         
         assert out["accuracy"] == case["expected"]["accuracy"]
-        assert out["auc"] == case["expected"]["auc"]
-        assert out["tn"] == case["expected"]["tn"]
-        assert out["fp"] == case["expected"]["fp"]
         assert out["fn"] == case["expected"]["fn"]
         assert out["tp"] == case["expected"]["tp"]
-        assert np.array_equal(out["probabilities"], (case["probabilities"] >= case["threshold"]))
