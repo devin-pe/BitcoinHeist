@@ -5,8 +5,9 @@ import datetime
 import pandas as pd
 from datetime import date
 from pyspark.testing.utils import assertDataFrameEqual
+from pyspark.sql import DataFrame
 from pyspark.sql.types import IntegerType
-from src.data_preprocessing import _get_data_after, preprocess
+from src.data_preprocessing import _get_data_after, preprocess, downsample, split_data
 
 
 def test_get_data_after(spark_fixture):
@@ -257,7 +258,72 @@ def test_preprocess(spark_fixture):
           mock_get_data.return_value = case["data"]
           out = preprocess(case["start_date"])
           expected = case["expected"]
-          expected = expected.withColumn("is_ransomware", 
-                                         expected["is_ransomware"].cast(IntegerType())
-                                         )
+          expected = expected.withColumn("is_ransomware", expected["is_ransomware"].cast(IntegerType()))
           assertDataFrameEqual(out, expected, ignoreColumnOrder=True)
+        
+
+def test_downsample(spark_fixture):
+    cases = [
+        {
+            # Typical case
+            "positive_data": spark_fixture.createDataFrame(pd.DataFrame([
+                {"address": "112eFykaD53KEkKeYW9KW8eWebZYSbt2f5", "income": 100.0, "is_ransomware": 1},
+                {"address": "112eFykaD53KEkKeYW9KW8eWebZYSbt2f5", "income": 200.0, "is_ransomware": 1}
+            ])),
+            "negative_data": spark_fixture.createDataFrame(pd.DataFrame([
+                {"address": "112eFykaD53KEkKeYW9KW8eWebZYSbt2f5", "income": 10.0, "is_ransomware": 0},
+                {"address": "112eFykaD53KEkKeYW9KW8eWebZYSbt2f5", "income": 20.0, "is_ransomware": 0},
+                {"address": "112eFykaD53KEkKeYW9KW8eWebZYSbt2f5", "income": 5.0, "is_ransomware": 0},
+                {"address": "112eFykaD53KEkKeYW9KW8eWebZYSbt2f5", "income": 1.0, "is_ransomware": 0},
+                {"address": "112eFykaD53KEkKeYW9KW8eWebZYSbt2f5", "income": 50.0, "is_ransomware": 0}
+            ])),
+            "ratio": 1.0,
+            "expected_count": 2
+        },
+    ]
+
+    for case in cases:
+        with mock.patch("src.data_preprocessing.RunConfig") as MockRunConfig:
+            MockRunConfig.seed = 38
+            out = downsample(case["negative_data"], case["positive_data"], case["ratio"])
+            assert out.count() == case["expected_count"]
+            
+
+
+def test_split_data(spark_fixture):
+    cases = [
+        {
+            # Typical case
+            "data": spark_fixture.createDataFrame(pd.DataFrame([
+                {"income": 100.0, "weight": 5.0, "count": 10, "is_ransomware": 1},
+                {"income": 200.0, "weight": 6.0, "count": 12, "is_ransomware": 1},
+                {"income": 0.5, "weight": 1.0, "count": 1, "is_ransomware": 0},
+                {"income": 0.2, "weight": 1.0, "count": 1, "is_ransomware": 0},
+                {"income": 1.5, "weight": 2.0, "count": 2, "is_ransomware": 0},
+                {"income": 5.0, "weight": 1.0, "count": 5, "is_ransomware": 0},
+            ])),
+            
+            "ratio": 1.0,
+            "expected_total_rows": 4, # 2 pos, 2 neg
+        }
+    ]
+
+    for case in cases:
+        with mock.patch("src.data_preprocessing.PreprocessConfig") as MockPreprocessConfig, \
+              mock.patch("src.data_preprocessing.RunConfig") as MockRunConfig, \
+              mock.patch("src.data_preprocessing.downsample") as mock_downsample, \
+              mock.patch("src.data_preprocessing.save_training_telemetry_baseline") as mock_telemetry:
+            
+            MockPreprocessConfig.target_col = "is_ransomware"
+            MockPreprocessConfig.negative_to_positive_ratio = case["ratio"]
+            MockRunConfig.seed = 42
+            mock_downsampled_data = case["data"].filter("is_ransomware == 0").limit(2)
+            mock_downsample.return_value = mock_downsampled_data
+            
+            train_X, train_y, test_X, _ = split_data(case["data"])
+
+            total_rows_out = len(train_X) + len(test_X)
+            assert total_rows_out == case["expected_total_rows"]
+            mock_telemetry.assert_called_with(train_y)
+    
+            

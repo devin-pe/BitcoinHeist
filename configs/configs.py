@@ -6,12 +6,11 @@ env_mode = os.getenv("APP_ENV", "LOCAL").upper()
 
 @dataclass(init=False, frozen=True)
 class BaseRunConfig:
-    negative_to_positive_ratio: float = 5.0
-    num_folds: int = 5
+    app_name: str = "btc_ransomware"
+    run_name: str = "Run_123"
     experiment_name: str = "BTC"
-    seed: int = 42
     n_jobs: int = 5
-    max_rounds: int = 100
+    seed: int = 42
     mlflow_tracking_uri: str = "http://localhost:8080"
 
 
@@ -22,6 +21,10 @@ class FileConfig:
     preprocessing_data_path: str = "data/intermediate/preprocessing/"
     first_features_data_path: str = "data/intermediate/first_features/"
     second_features_data_path: str = "data/intermediate/second_features"
+    artifact_folder: str = "feature_extractor"
+    artifact_file: str = "features.pkl"
+    telemetry_training_data_path: str = "data/telemetry_training_data.json"
+    telemetry_live_data_path: str = "data/telemetry_live_data.json"
     chunk_size: int = 100_000
     
 
@@ -38,9 +41,11 @@ class PreprocessConfig:
     day_col: str = "day"
     target_col: str = "is_ransomware"
     drop_cols: list[str] = ["partition_date", "year", "day", "label"]
+    negative_to_positive_ratio: float = 5.0
     
   
 class FeatureConfig:
+    default_feature_cols: list[str] = ["length", "weight", "count", "looped", "neighbors", "income"]
     epsilon: int =  1e-6
     cols_to_log: list[str] = ["count", "neighbors", "income"]
     first_interaction_cols: list[tuple[str]] = [
@@ -52,14 +57,51 @@ class FeatureConfig:
         ("log_income", "log_neighbors"), ("weight", "log_neighbors"), ("weight", "length"),
         ("length", "log_neighbors")
     ]
-    drop_cols: list[str] = ["length", "log_count", "log_income", "log_neighbors", "neighbors_per_length"]
+    z_score_cols: list[str] = ["length", "log_count", "log_income", "log_neighbors", "neighbors_per_length"]
     
     
+@dataclass(
+    init=False,
+)
+class ModelConfig:
+    model_name: str = "alpha"
+    n_jobs: int = 5
+    max_rounds: int = 100
+    model_name: str = "ebm_ransomware_classifier"
+    threshold_file: str = "model_threshold.json"
+    artifact_folder: str = "training_artifacts"
+    true_positives_key_name: str = "tp_weakest_5"
+    false_negatives_key_name: str = "fn_strongest_5"
+
+
+@dataclass(frozen=True)
+class RiskLevel:
+    threshold: float
+    label: str
+
+
+@dataclass(init=False, frozen=True)
+class BaseApiConfig:
+    api_uri: str = "http://localhost:5001"
+    very_high_risk: RiskLevel = RiskLevel(0.9, "very high")
+    high_risk: RiskLevel = RiskLevel(0.7, "high")
+    
+
+class BaseTelemetryConfig:
+    num_instances_for_trigger: int = 100
+    epsilon: float = 1e-6
+    push_gateway_uri: str = "http://localhost:9091"
+
+
 if env_mode == "DOCKER":
     from .docker_config import DockerRunConfig as RunConfig
+    from .docker_config import DockerApiConfig as ApiConfig
+    from .docker_config import DockerTelemetryConfig as TelemetryConfig
     
 elif env_mode == "LOCAL":
     from .local_config import LocalRunConfig as RunConfig
-
+    from .local_config import LocalApiConfig as ApiConfig
+    from .local_config import LocalTelemetryConfig as TelemetryConfig
+     
 else:
     raise ValueError(f"Unknown APP_ENV: {env_mode}")

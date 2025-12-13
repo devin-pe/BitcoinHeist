@@ -3,6 +3,7 @@ from pyspark.sql.types import IntegerType
 import pyspark.sql.functions as F
 from datetime import date
 from configs.configs import FileConfig, RunConfig, PreprocessConfig
+from src.utils import save_training_telemetry_baseline
 
 
 def _get_data_after(start_date: date) -> DataFrame:
@@ -49,11 +50,10 @@ def split_data(data: DataFrame):
     positive_data = data.filter(F.col(PreprocessConfig.target_col) == 1)
     negative_data = data.filter(F.col(PreprocessConfig.target_col) == 0)
 
-    
     negative_data = downsample(
         negative_data, 
         positive_data, 
-        ratio=RunConfig.negative_to_positive_ratio
+        ratio=PreprocessConfig.negative_to_positive_ratio
     )
     
     train_pos, test_pos = positive_data.randomSplit([0.8, 0.2], seed=RunConfig.seed)
@@ -71,6 +71,8 @@ def split_data(data: DataFrame):
     
     test_X = test_data[feature_cols]
     test_y = test_data[PreprocessConfig.target_col]
+    
+    save_training_telemetry_baseline(train_y)
 
     return train_X, train_y, test_X, test_y
 

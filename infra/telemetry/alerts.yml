@@ -1,0 +1,98 @@
+groups:
+  - name: HttpAlerts
+    rules:
+      - alert: HttpNon200ResponseCode
+        expr: sum by (job, instance) (rate(btc_ransomware_http_request_exceptions_total{status!~"2.."}[1m])) > 0
+        for: 1m
+        labels:
+          severity: error
+        annotations:
+          summary: "Non-200 HTTP codes for job '{{ $labels.job }}'"
+          description: "Job '{{ $labels.job }}' on instance '{{ $labels.instance }}' is experiencing non-200 HTTP response codes. Current rate: {{ $value }} requests/sec."
+
+      - alert: ApiRequestRateSpike
+        expr: rate(btc_ransomware_http_request_total[1m]) > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spike in API requests"
+          description: "Request rate is {{ $value }} per sec"
+
+  - name: SystemAlerts
+    rules:
+      - alert: HighMemoryUsage
+        expr: btc_ransomware_memory_usage_bytes > 1e9
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Application memory usage is {{ $value }}B, that is over the assigned 1GB threshold"
+
+      - alert: ModelLoadingFailure
+        expr: btc_ransomware_model_load_seconds > 30
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Model loading is taking too long"
+          description: "Model load time is {{ $value }}s, which may indicate issues with MLflow"
+
+  - name: DataQualityAlerts
+    rules:
+      - alert: DataQualityIssuesDetected
+        expr: rate(btc_ransomware_data_quality_total[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Data quality issues detected in requests"
+          description: "Detecting {{ $value }} data quality issues per second (rule: {{ $labels.quality_rule }})"
+
+      - alert: HighPSIDrift
+        expr: btc_ransomware_psi_s > 0.1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High PSI drift"
+          description: "PSI for '{{ $labels.target }}' is {{ $value }}, indicating significant distribution shift"
+
+      - alert: CriticalPSIDrift
+        expr: btc_ransomware_psi_s > 0.2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical PSI drift"
+          description: "PSI for '{{ $labels.target }}' is {{ $value }}, model retraining urgently needed"
+
+  - name: BusinessAlerts
+    rules:
+      - alert: HighRansomwarePredictionRate
+        expr: rate(btc_ransomware_predictions_total{pred="ransomware"}[5m]) > 0.2
+        for: 1m
+        labels:
+          severity: info
+        annotations:
+          summary: "High rate of ransomware predictions"
+          description: "Ransomware predictions occurring at {{ $value }} per second"
+
+      - alert: LowCacheHitRate
+        expr: btc_ransomware_cache_hit_rate < 50
+        for: 1m
+        labels:
+          severity: info
+        annotations:
+          summary: "Low cache hit rate for explanations"
+          description: "Cache hit rate is {{ $value }}%"
+
+      - alert: HighConfidenceRansomwareSpike
+        expr: rate(btc_ransomware_high_risk_predictions_total{confidence_level="very_high"}[5m]) > 0.2
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spike in high-confidence ransomware predictions"
+          description: "Detecting {{ $value }} very high rate of confident ransomware predictions+"

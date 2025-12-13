@@ -1,0 +1,10 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: 'null'
+  group_by: ['alertname', 'severity']
+  repeat_interval: 24h
+
+receivers:
+  - name: 'null'

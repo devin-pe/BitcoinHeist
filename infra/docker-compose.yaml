@@ -3,21 +3,36 @@ services:
     build:
         context: ..
         dockerfile: infra/build/Dockerfile
-    image: project:v0
-    command: python src/main_training.py
+    image: explain:v0
+    command: flask --app src/main_api run --host 0.0.0.0 --port 5001
     volumes:
       - ../data:/app/data
       - ../src:/app/src
       - ../configs:/app/configs
+    environment:
+      - APP_ENV=DOCKER
+      - MLFLOW_TRACKING_URI=${DOCKER_MLFLOW_URI}
+    ports:
+      - "5001:5001"
+    networks:
+      - app-network
     depends_on:
       mlflow:
         condition: service_healthy
+    healthcheck:
+      test: apt-get update -y && apt-get install -y curl && curl --fail http://localhost:5001/health || exit 1
+      retries: 5
+      interval: 30s 
 
   mlflow:
     image: ghcr.io/mlflow/mlflow:v3.3.0rc0
     command: mlflow server --host 0.0.0.0 --port 8080
+    volumes:
+      - ../artifacts:/artifacts
     ports:
       - "8080:8080"
+    networks:
+      - app-network
     healthcheck:
       test: apt-get update -y && apt-get install -y curl && curl --fail http://localhost:8080 || exit 1
       retries: 3
@@ -27,13 +42,14 @@ services:
       build:
         context: ..
         dockerfile: infra/build/Dockerfile
-      image: project:v0
+      image: explain:v0
       container_name: dagster_ui
       command: sh -c "mkdir -p /app/dagster_home/logs &&
-             dagster dev -h 0.0.0.0 -p 4242 -f src/main_training.py"
+             dagster dev -h 0.0.0.0 --port 4242 -f src/main_dags.py"
       environment:
         - APP_ENV=DOCKER
         - DAGSTER_HOME=/app/dagster_home
+        - MLFLOW_TRACKING_URI=${DOCKER_MLFLOW_URI}
       ports:
         - "4242:4242"
       volumes:
@@ -41,9 +57,68 @@ services:
         - ../configs:/app/configs
         - ../src:/app/src
         - dagster_storage:/app/dagster_home
+      networks:
+        - app-network
       depends_on:
         mlflow:
           condition: service_healthy
+    
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    depends_on:
+      - prometheus_push_gateway
+    volumes:
+      - "./telemetry/prometheus.yml:/etc/prometheus/prometheus.yml"
+      - "./telemetry/alerts.yml:/etc/prometheus/alerts.yml"
+    ports:
+      - "9090:9090"
+    networks:
+        - app-network
+    healthcheck:
+      test: wget http://localhost:9090/metrics -S -O - || exit 1
+      retries: 3
+      interval: 5s
+
+  prometheus_push_gateway:
+    image: prom/pushgateway:v1.11.1
+    ports:
+      - "9091:9091"
+    networks:
+        - app-network
+    healthcheck:
+      test: wget http://localhost:9091/metrics -S -O - || exit 1
+      retries: 3
+      interval: 5s
+  
+  alertmanager:
+    image: prom/alertmanager:v0.29.0
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./telemetry/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    networks:
+      - app-network
+  
+  grafana:
+    image: grafana/grafana:main-ubuntu
+    container_name: grafana
+    volumes:
+      - ./telemetry/grafana/provisioning:/etc/grafana/provisioning
+      - ./telemetry/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana-storage:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    depends_on:
+      - prometheus
+  
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   dagster_storage:
+  grafana-storage:

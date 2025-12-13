@@ -1,0 +1,257 @@
+{
+  "annotations": {
+    "list": [{
+      "datasource": "Prometheus",
+      "enable": true,
+      "expr": "ALERTS{alertstate=\"firing\"}",
+      "iconColor": "red",
+      "name": "Alerts"
+    }]
+  },
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 1}
+            ]
+          }
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {
+        "colorMode": "background"
+      },
+      "targets": [{"expr": "count(ALERTS{alertstate=\"firing\"})"}],
+      "title": "Active Alerts",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 15,
+            "lineWidth": 2
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "options": {
+        "legend": {"calcs": ["mean", "last"]}
+      },
+      "targets": [{"expr": "rate(btc_ransomware_http_request_total[1m])"}],
+      "title": "Request Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 50},
+              {"color": "green", "value": 80}
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "targets": [{"expr": "btc_ransomware_cache_hit_rate"}],
+      "title": "Cache Hit Rate",
+      "type": "gauge"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 80},
+              {"color": "red", "value": 100}
+            ]
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "id": 4,
+      "options": {
+        "graphMode": "area"
+      },
+      "targets": [{"expr": "btc_ransomware_memory_usage_bytes"}],
+      "title": "Memory Usage",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 25,
+            "lineWidth": 2,
+            "stacking": {"mode": "normal"}
+          }
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "id": 5,
+      "options": {
+        "legend": {"calcs": ["mean", "max"]}
+      },
+      "targets": [
+        {"expr": "rate(btc_ransomware_predictions_total{pred=\"ransomware\"}[5m])", "legendFormat": "Ransomware"},
+        {"expr": "rate(btc_ransomware_predictions_total{pred=\"white\"}[5m])", "legendFormat": "White"}
+      ],
+      "title": "Predictions Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {"h": 8, "w": 6, "x": 12, "y": 4},
+      "id": 6,
+      "options": {
+        "displayLabels": ["percent"],
+        "pieType": "donut",
+        "legend": {"placement": "right", "values": ["value", "percent"]}
+      },
+      "targets": [{"expr": "sum(rate(btc_ransomware_predictions_total[5m])) by (pred)", "legendFormat": "{{ pred }}"}],
+      "title": "Prediction Split",
+      "type": "piechart"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0.1},
+              {"color": "red", "value": 0.2}
+            ]
+          }
+        }
+      },
+      "gridPos": {"h": 8, "w": 6, "x": 18, "y": 4},
+      "id": 7,
+      "targets": [{"expr": "btc_ransomware_psi_s", "format": "table", "instant": true}],
+      "title": "Data Drift (PSI)",
+      "transformations": [{
+        "id": "organize",
+        "options": {
+          "excludeByName": {"Time": true, "__name__": true, "instance": true, "job": true},
+          "renameByName": {"Value": "PSI Score", "target": "Feature"}
+        }
+      }],
+      "type": "table"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "stacking": {"mode": "normal"}
+          }
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "id": 8,
+      "options": {
+        "legend": {"calcs": ["sum"]}
+      },
+      "targets": [{"expr": "rate(btc_ransomware_high_risk_predictions_total[5m])", "legendFormat": "{{ confidence_level }}"}],
+      "title": "Risk Levels",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "thresholdsStyle": {"mode": "line"}
+          },
+          "thresholds": {
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 0.1}
+            ]
+          }
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "id": 9,
+      "options": {
+        "legend": {"calcs": ["mean", "max"]}
+      },
+      "targets": [{"expr": "rate(btc_ransomware_data_quality_total[5m])", "legendFormat": "{{ quality_rule }}"}],
+      "title": "Data Quality Issues",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 2
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+      "id": 10,
+      "options": {
+        "legend": {"calcs": ["mean", "max"]}
+      },
+      "targets": [{"expr": "btc_ransomware_model_load_seconds", "legendFormat": "Load Time"}],
+      "title": "Model Load Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 90,
+            "stacking": {"mode": "normal"}
+          }
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+      "id": 11,
+      "options": {
+        "legend": {"calcs": ["sum"]}
+      },
+      "targets": [{"expr": "rate(btc_ransomware_http_request_exceptions_total[5m])", "legendFormat": "{{ status }}"}],
+      "title": "HTTP Errors",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "style": "dark",
+  "tags": ["ml-monitoring"],
+  "time": {"from": "now-30m", "to": "now"},
+  "timezone": "browser",
+  "title": "Ransomware Detection",
+  "uid": "btc-ransomware"
+}
