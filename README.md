@@ -4,11 +4,12 @@ This project provides an end-to-end data pipeline, model training workflow, and 
 
 ## Setup Instructions
 
-### 1. Clone the Repository
+### 1. Clone the Repository and Install Requirements
 
 ```bash
 git clone git@github.com:devin-pe/BitcoinHeist.git
 cd BitcoinHeist
+pip install -r requirements.txt
 ```
 
 ### 2. Download the Dataset
