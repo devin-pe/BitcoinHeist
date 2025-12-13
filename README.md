@@ -51,7 +51,7 @@ Materialize all six assets under:
 - `data_pipeline`
 - `model_training`
 
-Wait for training to complete.
+Wait for training to complete. Once it has completed, observe how results_first_pass_feature_engineering improves over results_baseline in terms of TP and FN.
 
 ### 6. Enable Automation
 
